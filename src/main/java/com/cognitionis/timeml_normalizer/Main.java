@@ -7,7 +7,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import javax.xml.parsers.*;
-
+import com.cognitionis.nlp_files.*;
+import com.cognitionis.utils_basickit.*;
 
 
 /**
@@ -66,23 +67,21 @@ public class Main {
                         }
                         if (f.isFile()) {
                             File[] files = {f};
-                            XMLFile xmlfile = new XMLFile();
-                            xmlfile.loadFile(f);
+                            XMLFile xmlfile = new XMLFile(f.getAbsolutePath(),null);
                             xmlfile.overrideExtension("tml-min-consistency");
-                            if (!xmlfile.isWellFormed()  || !validateTEXTDCT(f)) {
+                            if (!xmlfile.isWellFormatted()|| !validateTEXTDCT(f)) {
                                 throw new Exception("File: " + xmlfile.getFile().getCanonicalPath() + " is not a valid TimeML XML file.");
                             }
                             annotationList.add(files);
                         } else {
-                            File[] files = f.listFiles(CognitionisFileUtils.onlyFilesFilter);
+                            File[] files = f.listFiles(FileUtils.onlyFilesFilter);
                             if (files.length == 0) {
                                 throw new Exception("Empty folder: " + f.getName());
                             }
                             for (int fn = 0; fn < files.length; fn++) {
-                                XMLFile xmlfile = new XMLFile();
-                                xmlfile.loadFile(files[fn]);
+                                XMLFile xmlfile = new XMLFile(files[fn].getAbsolutePath(),null);
                                 xmlfile.overrideExtension("tml-min-consistency");
-                                if (!xmlfile.isWellFormed()  || !validateTEXTDCT(xmlfile.getFile())) {
+                                if (!xmlfile.isWellFormatted()|| !validateTEXTDCT(xmlfile.getFile())) {
                                     throw new Exception("File: " + xmlfile.getFile().getCanonicalPath() + " is not a valid TimeML XML file.");
                                 }
                             }
@@ -115,9 +114,9 @@ public class Main {
             long endTime = System.currentTimeMillis();
             long sec = (endTime - startTime) / 1000;
             if (sec < 60) {
-                System.err.println("Done in " + CognitionisStringUtils.twoDecPosS(sec) + " sec!\n");
+                System.err.println("Done in " + StringUtils.twoDecPosS(sec) + " sec!\n");
             } else {
-                System.err.println("Done in " + CognitionisStringUtils.twoDecPosS(sec / 60) + " min!\n");
+                System.err.println("Done in " + StringUtils.twoDecPosS(sec / 60) + " min!\n");
             }
         } catch (Exception e) {
             System.err.println("Errors found:\n\t" + e.getMessage() + "\n");

@@ -1,5 +1,6 @@
 package com.cognitionis.timeml_normalizer;
 
+import com.cognitionis.utils_basickit.FileUtils;
 import java.io.*;
 import java.util.regex.Pattern;
 
@@ -155,7 +156,7 @@ public class Tokenizer_PTB_Rulebased {
      * @param out_file
      */
     public void tokenize(File in_file, File out_file) throws Exception {
-        String encoding = CognitionisFileUtils.getEncoding(in_file);
+        String encoding = FileUtils.getEncoding(in_file);
         if (!encoding.equalsIgnoreCase("UTF-8") && !encoding.equalsIgnoreCase("ASCII")) {
             throw new Exception("\n\tError: Only ASCII/UTF-8 text is allowed. " + in_file.getName() + " is " + encoding + "\n");
         }
@@ -230,7 +231,7 @@ public class Tokenizer_PTB_Rulebased {
     public String tokenize_filename_to_tokfile(String in_filename) throws Exception {
         File in_file = new File(in_filename);
         File out_file = new File(in_filename + ".tok");
-        String encoding = CognitionisFileUtils.getEncoding(in_file);
+        String encoding = FileUtils.getEncoding(in_file);
         if (!encoding.equalsIgnoreCase("UTF-8") && !encoding.equalsIgnoreCase("ASCII")) {
             throw new Exception("\n\tError: Only ASCII/UTF-8 text is allowed. " + in_file.getName() + " is " + encoding + "\n");
         }

@@ -1,12 +1,13 @@
 package com.cognitionis.timeml_normalizer;
 
+import com.cognitionis.nlp_files.*;
+import com.cognitionis.utils_basickit.*;
 import java.io.*;
 import java.util.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import javax.xml.parsers.*;
-import org.xml.sax.SAXException;
 
 public class TimeML_Normalizer {
 
@@ -79,22 +80,22 @@ public class TimeML_Normalizer {
                     File annot = annotations.get(a)[i];
                     File ftdir = new File(annot.getCanonicalPath() + "-data");
                     if (ftdir.exists()) {
-                        CognitionisFileUtils.deleteRecursively(ftdir);
+                        FileUtils.deleteRecursively(ftdir);
                     }
                     if (!ftdir.mkdirs()) {  // mkdirs creates many parent dirs if needed
                         throw new Exception("Directory not created...");
                     }
                     File workingfile = new File(ftdir + File.separator + annot.getName());
-                    CognitionisFileUtils.copyFileUtil(annot, workingfile);
-                    XMLFile xmlfile = new XMLFile();
-                    xmlfile.loadFile(workingfile);
-                    String plainfile = xmlfile.toPlain(); // only <text>
+                    FileUtils.copyFileUtil(annot, workingfile);
+                    XMLFile xmlfile = new XMLFile(workingfile.getAbsolutePath(),null);
+                    String plainfile=workingfile.getAbsolutePath()+".txt";
+                    xmlfile.toPlain(plainfile); // only <text>
                     Tokenizer_PTB_Rulebased tokenizer = new Tokenizer_PTB_Rulebased(false);
                     //String output = Tokenizer_perl.run(plainfile);
                     String output = tokenizer.tokenize_filename_to_tokfile(plainfile);
                     output = merge_tok_n_tml(output, workingfile.getCanonicalPath());
-                    tokenFileStringArr.add(CognitionisFileUtils.readFileAsString(output, "UTF-8").split("\\n"));
-                    xmlFileString.add(CognitionisFileUtils.readFileAsString(workingfile.getCanonicalPath(), "UTF-8"));
+                    tokenFileStringArr.add(FileUtils.readFileAsString(output, "UTF-8").split("\\n"));
+                    xmlFileString.add(FileUtils.readFileAsString(workingfile.getCanonicalPath(), "UTF-8"));
                     event_map[a] = new HashMap<String, String>();
                     timex_map[a] = new HashMap<String, String>();
                     mk_map[a] = new HashMap<String, String>();
@@ -396,13 +397,13 @@ public class TimeML_Normalizer {
 
 
                     // save normalized annotation
-                    CognitionisFileUtils.writeFileFromString(tmp, ndir + File.separator + annotations.get(a)[i].getName());
+                    FileUtils.writeFileFromString(tmp, ndir + File.separator + annotations.get(a)[i].getName());
                     File annot = annotations.get(a)[i];
                     File ftdir = new File(annot.getCanonicalPath() + "-data");
                     if (ftdir.exists()) {
                         // uncomment to see intermediate files
                         //if (System.getProperty("DEBUG") == null || System.getProperty("DEBUG").equalsIgnoreCase("false")) {
-                        CognitionisFileUtils.deleteRecursively(ftdir);
+                        FileUtils.deleteRecursively(ftdir);
                         //}
                     }
                 }
