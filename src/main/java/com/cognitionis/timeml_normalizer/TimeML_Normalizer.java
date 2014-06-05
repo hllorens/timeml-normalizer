@@ -59,7 +59,7 @@ public class TimeML_Normalizer {
 
             // for each file
             for (int i = 0; i < guide.length; i++) {
-                System.out.println("Normalizing " + guide[i].getName()+"with respect="+respect);
+                System.out.println("Normalizing " + guide[i].getName()+" with respect="+respect);
                 if (respect) {
                     respected_ids = get_annotation_ids(annotations.get(0)[i]);
                     //System.out.println(respected_ids);

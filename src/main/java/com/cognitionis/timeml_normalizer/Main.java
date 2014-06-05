@@ -67,7 +67,7 @@ public class Main {
                         }
                         if (f.isFile()) {
                             File[] files = {f};
-                            XMLFile xmlfile = new XMLFile(f.getAbsolutePath(),null);
+                            XMLFile xmlfile = new XMLFile(f.getAbsolutePath(),FileUtils.getApplicationPath()+"program-data"+File.separator+"default-NLPFiles-descriptions"+File.separator+"tml-min-consistency-ids-only.xsd");
                             xmlfile.overrideExtension("tml-min-consistency");
                             if (!xmlfile.isWellFormatted()|| !validateTEXTDCT(f)) {
                                 throw new Exception("File: " + xmlfile.getFile().getCanonicalPath() + " is not a valid TimeML XML file.");
@@ -79,7 +79,7 @@ public class Main {
                                 throw new Exception("Empty folder: " + f.getName());
                             }
                             for (int fn = 0; fn < files.length; fn++) {
-                                XMLFile xmlfile = new XMLFile(files[fn].getAbsolutePath(),null);
+                                XMLFile xmlfile = new XMLFile(files[fn].getAbsolutePath(),FileUtils.getApplicationPath()+"program-data"+File.separator+"default-NLPFiles-descriptions"+File.separator+"tml-min-consistency-ids-only.xsd");
                                 xmlfile.overrideExtension("tml-min-consistency");
                                 if (!xmlfile.isWellFormatted()|| !validateTEXTDCT(xmlfile.getFile())) {
                                     throw new Exception("File: " + xmlfile.getFile().getCanonicalPath() + " is not a valid TimeML XML file.");

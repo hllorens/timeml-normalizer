@@ -20,11 +20,11 @@ LICENSE
 
 
 Usage:
-	java -jar path_to_tool_jar/TimeML-Normalizer.jar -a "annotation1;...;annotationN"
+	java -jar path_to_tool_jar/timeml-normalizer.jar -a "annotation1;...;annotationN"
 	NOTE: add -d option to see extra debug information
 
 Examples:
-java -jar TimeML-Normalizer/TimeML-Normalizer.jar -a "sample-data/test-fold1;sample-data/TIPSem-fold1;sample-data/TIPSemB-fold1;sample-data/trios-fold1"
+java -jar target/timeml-normalizer.jar -a "sample-data/test-fold1;sample-data/TIPSem-fold1;sample-data/TIPSemB-fold1;sample-data/trios-fold1"
 
 
 
