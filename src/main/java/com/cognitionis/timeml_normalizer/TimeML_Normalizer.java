@@ -88,7 +88,7 @@ public class TimeML_Normalizer {
                     File workingfile = new File(ftdir + File.separator + annot.getName());
                     FileUtils.copyFileUtil(annot, workingfile);
                     XMLFile xmlfile = new XMLFile(workingfile.getAbsolutePath(),null);
-                    String plainfile=workingfile.getAbsolutePath()+".txt";
+                    String plainfile=workingfile.getAbsolutePath()+".plain";
                     xmlfile.toPlain(plainfile); // only <text>
                     Tokenizer_PTB_Rulebased tokenizer = new Tokenizer_PTB_Rulebased(false);
                     //String output = Tokenizer_perl.run(plainfile);
@@ -103,10 +103,15 @@ public class TimeML_Normalizer {
                     last_tid_local[a] = 0;
                 }
 
-
+                // for each line in a tokenized file
                 for (int linen = 0; linen < tokenFileStringArr.get(0).length; linen++) {
                     open_event = 0; // restart in every iteration (multi-token are not considered)
+                    //open_timex = 0; // timex are not reset (multi-token allowed)
                     String last_token = null; // check all files are equal
+                    
+                    // for this line in each annotation file
+                    // HANDLE EVENTS (MONOTOKEN): reset in each iteration 
+                    // HANDLE TIMEX closings (reset)-> if O or B-TIMEX
                     for (int a = 0; a < annotations.size(); a++) {
                         String[] pipesarr = tokenFileStringArr.get(a)[linen].split("\\|");
                         if (last_token == null) {
@@ -135,12 +140,14 @@ public class TimeML_Normalizer {
                             }
                             event_map[a].put(attribs.get("eid"), "e" + open_event);
                         }
-                        // for timex maintain open_timex[] first
+                        // maintain open_timex[] unless O or B-TIMEX3
                         if (pipesarr[1].equals("O") || pipesarr[1].equals("B-TIMEX3")) {
                             open_timex[a] = 0; // restart
                         }
                     }
 
+                    // for this line in each annotated file
+                    // HANDLE TIMEX (knowing which have been closed, handled above)
                     for (int a = 0; a < annotations.size(); a++) {
                         String[] pipesarr = tokenFileStringArr.get(a)[linen].split("\\|");
                         HashMap<String, String> attribs = XmlAttribs.parseAttrs(pipesarr[2]);
@@ -158,7 +165,11 @@ public class TimeML_Normalizer {
                             for (int at = 0; at < annotations.size(); at++) {
                                 // open and not used in other annotations
                                 if (a != at && open_timex[at] != 0 && last_tid_local[a] < open_timex[at]) {
-                                    open_timex[a] = open_timex[at];
+                                    if(!respect || (respect && a!=0)){
+                                        // this will give preference to match
+                                        // others with annotation 0 if possilbe
+                                        open_timex[a] = open_timex[at];
+                                    }
                                     break;
                                 }
                             }
@@ -169,11 +180,13 @@ public class TimeML_Normalizer {
                             }
                             timex_map[a].put(attribs.get("tid"), "t" + open_timex[a]);
                         }
-                        //if (pipesarr[1].matches("I-TIMEX3")) // just maintain opens open... do nothing.
+                        //if (pipesarr[1].matches("I-TIMEX3")) // just maintain 
+                        // opens open... do nothing. When it founds O or B-TIMEX
+                        // it will reset
                     }
                 }
 
-                // normalize entities given a map
+                // normalize entities given a map in a new file (-normalied folder)
                 for (int a = 0; a < annotations.size(); a++) {
                     File ndir = new File(annotations.get(a)[i].getParent() + "-normalized");
                     if (!ndir.exists() && !ndir.mkdirs()) {  // mkdirs creates many parent dirs if needed
