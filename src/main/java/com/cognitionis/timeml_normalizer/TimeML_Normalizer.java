@@ -12,38 +12,38 @@ import javax.xml.parsers.*;
 public class TimeML_Normalizer {
 
     public static HashSet<String> get_annotation_ids(File annotation) {
-        HashSet<String> ids=new HashSet<>();
-        try{
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.parse(annotation);
-        doc.getDocumentElement().normalize();
-                    NodeList text = doc.getElementsByTagName("TEXT");
-                    if (text.getLength() > 1) {
-                        throw new Exception("More than one TEXT tag found.");
-                    }
-                    Element TextElmnt = (Element) text.item(0); // If not ELEMENT NODE will throw exception
+        HashSet<String> ids = new HashSet<>();
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(annotation);
+            doc.getDocumentElement().normalize();
+            NodeList text = doc.getElementsByTagName("TEXT");
+            if (text.getLength() > 1) {
+                throw new Exception("More than one TEXT tag found.");
+            }
+            Element TextElmnt = (Element) text.item(0); // If not ELEMENT NODE will throw exception
 
 
-                    // normalize events (entity by entity in order) ---- // deprecated solution: e1=e3 -- e3=e1 map problem. //for(String e:event_map[a].keySet()){tmp=tmp.replaceAll("(eid|eventID)=\""+e+"\"", event_map[a].get(e));}
-                    NodeList current_node = TextElmnt.getElementsByTagName("EVENT");
-                    for (int s = 0; s < current_node.getLength(); s++) {
-                        Element element = (Element) current_node.item(s);
-                        ids.add(element.getAttribute("eid"));
-                    }
+            // normalize events (entity by entity in order) ---- // deprecated solution: e1=e3 -- e3=e1 map problem. //for(String e:event_map[a].keySet()){tmp=tmp.replaceAll("(eid|eventID)=\""+e+"\"", event_map[a].get(e));}
+            NodeList current_node = TextElmnt.getElementsByTagName("EVENT");
+            for (int s = 0; s < current_node.getLength(); s++) {
+                Element element = (Element) current_node.item(s);
+                ids.add(element.getAttribute("eid"));
+            }
 
-                    current_node = TextElmnt.getElementsByTagName("TIMEX3");
-                    for (int s = 0; s < current_node.getLength(); s++) {
-                        Element element = (Element) current_node.item(s);
-                        ids.add(element.getAttribute("tid"));
-                    }
-                    
-        }catch(Exception e){
+            current_node = TextElmnt.getElementsByTagName("TIMEX3");
+            for (int s = 0; s < current_node.getLength(); s++) {
+                Element element = (Element) current_node.item(s);
+                ids.add(element.getAttribute("tid"));
+            }
+
+        } catch (Exception e) {
             System.err.println("Errors found (TimeML_Normalizer):\n\t" + e.toString() + "\n");
             if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
                 e.printStackTrace(System.err);
                 System.exit(1);
-            }            
+            }
             return ids;
         }
         return ids;
@@ -59,7 +59,7 @@ public class TimeML_Normalizer {
 
             // for each file
             for (int i = 0; i < guide.length; i++) {
-                System.out.println("Normalizing " + guide[i].getName()+" with respect="+respect);
+                System.out.println("Normalizing " + guide[i].getName() + " with respect=" + respect);
                 if (respect) {
                     respected_ids = get_annotation_ids(annotations.get(0)[i]);
                     //System.out.println(respected_ids);
@@ -69,11 +69,13 @@ public class TimeML_Normalizer {
                 HashMap<String, String>[] mk_map = new HashMap[annotations.size()];
                 ArrayList<String> xmlFileString = new ArrayList();
                 ArrayList<String[]> tokenFileStringArr = new ArrayList();
-                int last_eid = 1;
-                int open_event = 0;
-                int last_tid = 1;
-                int[] open_timex = new int[annotations.size()];
-                int[] last_tid_local = new int[annotations.size()];
+                int last_eid = 1; // keeps ordered normalized eids (cross annotation)
+                int last_tid = 1; // keeps ordered normalized tids (cross annotation)
+                int open_event; // =0, reset in each iteration, does not handle multitoken
+                int[] open_timex = new int[annotations.size()]; // assigns tid to annotation
+                //DEPRECATED: int[] last_tid_local = new int[annotations.size()]; // last tid used in annotation
+                String [] current_original_open_tids = new String[annotations.size()]; // original ids of currently open timexes
+                HashMap<Integer, HashSet<Integer>> used_tids_local = new HashMap<>(); // last tid used in annotation
 
                 // for each annotation
                 for (int a = 0; a < annotations.size(); a++) {
@@ -87,8 +89,8 @@ public class TimeML_Normalizer {
                     }
                     File workingfile = new File(ftdir + File.separator + annot.getName());
                     FileUtils.copyFileUtil(annot, workingfile);
-                    XMLFile xmlfile = new XMLFile(workingfile.getAbsolutePath(),null);
-                    String plainfile=workingfile.getAbsolutePath()+".plain";
+                    XMLFile xmlfile = new XMLFile(workingfile.getAbsolutePath(), null);
+                    String plainfile = workingfile.getAbsolutePath() + ".plain";
                     xmlfile.toPlain(plainfile); // only <text>
                     Tokenizer_PTB_Rulebased tokenizer = new Tokenizer_PTB_Rulebased(false);
                     //String output = Tokenizer_perl.run(plainfile);
@@ -96,11 +98,14 @@ public class TimeML_Normalizer {
                     output = merge_tok_n_tml(output, workingfile.getCanonicalPath());
                     tokenFileStringArr.add(FileUtils.readFileAsString(output, "UTF-8").split("\\n"));
                     xmlFileString.add(FileUtils.readFileAsString(workingfile.getCanonicalPath(), "UTF-8"));
-                    event_map[a] = new HashMap<String, String>();
-                    timex_map[a] = new HashMap<String, String>();
-                    mk_map[a] = new HashMap<String, String>();
+                    event_map[a] = new HashMap<>();
+                    timex_map[a] = new HashMap<>();
+                    mk_map[a] = new HashMap<>();
                     open_timex[a] = 0;
-                    last_tid_local[a] = 0;
+                    //last_tid_local[a] = 0; deprecated in favour of used_tids_local because of "respect"
+                    current_original_open_tids[a]=null;
+                    used_tids_local.put(a, new HashSet<Integer>());
+                    used_tids_local.get(a).add(0);
                 }
 
                 // for each line in a tokenized file
@@ -108,7 +113,8 @@ public class TimeML_Normalizer {
                     open_event = 0; // restart in every iteration (multi-token are not considered)
                     //open_timex = 0; // timex are not reset (multi-token allowed)
                     String last_token = null; // check all files are equal
-                    
+
+
                     // for this line in each annotation file
                     // HANDLE EVENTS (MONOTOKEN): reset in each iteration 
                     // HANDLE TIMEX closings (reset)-> if O or B-TIMEX
@@ -126,8 +132,8 @@ public class TimeML_Normalizer {
                         HashMap<String, String> attribs = XmlAttribs.parseAttrs(pipesarr[2]);
                         if (pipesarr[1].matches("B-EVENT")) {
                             if (open_event == 0) {
-                                if(respect){
-                                    while(respected_ids.contains((String)("e"+Integer.toString(last_eid)))){
+                                if (respect) {
+                                    while (respected_ids.contains((String) ("e" + Integer.toString(last_eid)))) {
                                         last_eid++;
                                     }
                                 }
@@ -135,8 +141,8 @@ public class TimeML_Normalizer {
                                 //System.out.println("open event="+open_event);
                                 last_eid++;
                             }
-                            if(respect && a==0){
-                                open_event=Integer.parseInt(attribs.get("eid").substring(1));
+                            if (respect && a == 0) {
+                                open_event = Integer.parseInt(attribs.get("eid").substring(1));
                             }
                             event_map[a].put(attribs.get("eid"), "e" + open_event);
                         }
@@ -152,32 +158,108 @@ public class TimeML_Normalizer {
                         String[] pipesarr = tokenFileStringArr.get(a)[linen].split("\\|");
                         HashMap<String, String> attribs = XmlAttribs.parseAttrs(pipesarr[2]);
                         if (pipesarr[1].equals("B-TIMEX3")) {
-                            if(respect){
-                               while(respected_ids.contains((String)("t"+Integer.toString(last_tid)))){
-                                   last_tid++;
-                               }
+                            current_original_open_tids[a]=attribs.get("tid");
+                            if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                System.out.println("Normalizing (respect=" + respect + ") annotation_" + a + " original timex " + attribs.get("tid") + " last_tid=" + last_tid + " open_timex=" + Arrays.toString(open_timex) + " ");
                             }
-                            open_timex[a] = last_tid; // new by default
-                            if(respect && a==0){
-                                open_timex[a]=Integer.parseInt(attribs.get("tid").substring(1));
-                            }
-                            // try to match with still open timexes
-                            for (int at = 0; at < annotations.size(); at++) {
-                                // open and not used in other annotations
-                                if (a != at && open_timex[at] != 0 && last_tid_local[a] < open_timex[at]) {
-                                    if(!respect || (respect && a!=0)){
-                                        // this will give preference to match
-                                        // others with annotation 0 if possilbe
-                                        open_timex[a] = open_timex[at];
-                                    }
-                                    break;
+                            if (respect) {
+                                while (respected_ids.contains((String) ("t" + Integer.toString(last_tid)))) {
+                                    last_tid++;
                                 }
                             }
-                            last_tid_local[a] = open_timex[a];
-                            //new (not paired)
+                            open_timex[a] = last_tid; // new by default
+                            if (respect && a == 0) {
+                                open_timex[a] = Integer.parseInt(attribs.get("tid").substring(1));
+                            }
+
+                            // update open_timex if match with still open timexes
+                            if (respect && open_timex[0] != 0 && a != 0) {
+                                if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                    System.out.println("\tTrying to pair " + open_timex[a] + " with respected t" + open_timex[0]);
+                                }
+                                // id not used (not paired already)
+                                // prevents problems in cases like
+                                // B-TIMEX id=1    B-TIMEX id=1
+                                // I-TIMEX id=1    O
+                                // B-TIMEX id=1    B-TIMEX id=??
+                                // we use used_tids_local because with "respect"
+                                // we cannot ensure that is < unless we set the
+                                // counter to the highest respected id
+                                // So we keep track of all the used ids to allow
+                                // respected timex that
+                                // corresponds to more then two timexes in other
+                                // annotations (very rare but possible)
+                                if (!used_tids_local.get(a).contains(open_timex[0])) {
+                                    if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                        System.out.println("\t\tPaired");
+                                    }
+                                    open_timex[a] = open_timex[0];
+                                }
+                            } else {
+                                for (int at = 0; at < annotations.size(); at++) {
+                                    // timex open in other annotations
+                                    if (a != at && open_timex[at] != 0) {
+                                        if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                            System.out.println("\tTrying to pair annotation_"+a+" t" + open_timex[a] + " with annotation_"+at+" t" + open_timex[at]);
+                                        }
+                                        // id not used (not paired already)
+                                        // prevents problems in cases like
+                                        // B-TIMEX id=1    B-TIMEX id=1
+                                        // I-TIMEX id=1    O
+                                        // B-TIMEX id=1    B-TIMEX id=?? 
+                                        //if(last_tid_local[a] < open_timex[at]) { 
+                                        // NOTE: last_tid deprecated since it 
+                                        // could not work with respect in rare
+                                        // multi-token split timexes
+
+                                        // Furthermire, in case of respect do an
+                                        // inverse update if needed
+                                        if (respect && a == 0) {
+                                            //special pairing
+                                            for (int at2 = 0; at2 < annotations.size(); at2++) {                                            
+                                                if (at2!=a && open_timex[at2]!=0 && !used_tids_local.get(at2).contains(open_timex[0])) {
+                                                    if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                                        System.out.println("\t\tPaired specially, inverse update in annotation_"+at2+" tid="+open_timex[at2]+"(original "+current_original_open_tids[at2]+") by t"+open_timex[a]);
+                                                    }                                                    
+                                                    timex_map[at2].put(current_original_open_tids[at2], "t" + open_timex[a]);
+                                                    open_timex[at2]=open_timex[a];     
+                                                }
+                                            }
+                                            break;
+                                        } else {
+                                            // normal pairing
+                                            if (!used_tids_local.get(a).contains(open_timex[at])) {
+                                                if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                                    System.out.println("\t\tPaired normally");
+                                                }
+                                                open_timex[a] = open_timex[at];
+                                                // pairs with the earliest annotation
+                                                // that is open and has not been
+                                                // paired already < (not used)
+                                                // if it was = or > it means that
+                                                // one timex in one annotation was
+                                                // split in 2 (=) or more (>) in the
+                                                // other
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            // store current used id
+                            // allows
+                            // B-TIMEX id=1    B-TIMEX id=1       O
+                            // I-TIMEX id=1    O                  O
+                            // B-TIMEX id=1    B-TIMEX id=2       B-TIMEX id=1
+                            // B-TIMEX id=1    O                  B-TIMEX id=1
+                            //last_tid_local[a] = open_timex[a]; // deprecated for "respect"
+                            used_tids_local.get(a).add(open_timex[a]);
+                            // if assigned id is not paired (uses tid order)
+                            // increase counter, otherwise->paired, no need to increase
                             if (open_timex[a] == last_tid) {
                                 last_tid++;
                             }
+
                             timex_map[a].put(attribs.get("tid"), "t" + open_timex[a]);
                         }
                         //if (pipesarr[1].matches("I-TIMEX3")) // just maintain 
