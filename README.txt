@@ -18,6 +18,9 @@ LICENSE
    See the License for the specific language governing permissions and
    limitations under the License.
 
+Compiling/Installing (Maven):
+	cd timeml-normalizer/; mvn package 
+	#this will produce a distribution in the target/ folder (can be moved/renamed as wanted)
 
 Usage:
 	java -jar path_to_tool_jar/timeml-normalizer.jar -a "annotation1;...;annotationN"
