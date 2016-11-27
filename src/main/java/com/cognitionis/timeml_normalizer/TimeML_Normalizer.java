@@ -118,6 +118,7 @@ public class TimeML_Normalizer {
                     // for this line in each annotation file
                     // HANDLE EVENTS (MONOTOKEN): reset in each iteration 
                     // HANDLE TIMEX closings (reset)-> if O or B-TIMEX
+                    System.out.println("Normalizing events...");
                     for (int a = 0; a < annotations.size(); a++) {
                         String[] pipesarr = tokenFileStringArr.get(a)[linen].split("\\|");
                         if (last_token == null) {
@@ -131,6 +132,9 @@ public class TimeML_Normalizer {
                         }
                         HashMap<String, String> attribs = XmlAttribs.parseAttrs(pipesarr[2]);
                         if (pipesarr[1].matches("B-EVENT")) {
+                            if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                                System.out.println("B-EVENT annotation="+a +"  " + pipesarr[0] + "  "+pipesarr[2]);
+                            }
                             if (open_event == 0) {
                                 if (respect) {
                                     while (respected_ids.contains((String) ("e" + Integer.toString(last_eid)))) {
@@ -154,6 +158,7 @@ public class TimeML_Normalizer {
 
                     // for this line in each annotated file
                     // HANDLE TIMEX (knowing which have been closed, handled above)
+                    System.out.println("Normalizing timex...");
                     for (int a = 0; a < annotations.size(); a++) {
                         String[] pipesarr = tokenFileStringArr.get(a)[linen].split("\\|");
                         HashMap<String, String> attribs = XmlAttribs.parseAttrs(pipesarr[2]);
@@ -301,6 +306,9 @@ public class TimeML_Normalizer {
                     NodeList current_node = TextElmnt.getElementsByTagName("EVENT");
                     for (int s = 0; s < current_node.getLength(); s++) {
                         Element element = (Element) current_node.item(s);
+                        if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                            System.out.println("Normalizing event eid=" + element.getAttribute("eid"));
+                        }
                         tmp = tmp.replaceAll("(<EVENT[^>]*eid=\")" + element.getAttribute("eid") + "(\"[^>]*>)", "$1n" + event_map[a].get(element.getAttribute("eid")) + "$2");
                     }
                     tmp = tmp.replaceAll("(<EVENT[^>]*eid=\")n", "$1");
@@ -346,13 +354,20 @@ public class TimeML_Normalizer {
                     tmp = tmp.replaceAll("(<TIMEX3[^>]*endPoint=\")n", "$1");
 
                     // normalize and map makeinstances
+                    System.out.println("Normalizing makeinstances...");
                     HashMap<String, ArrayList<String>> event_mk_index = new HashMap<String, ArrayList<String>>();
                     HashSet<String> mks_new_ids = new HashSet<String>();
                     current_node = null;
                     current_node = doc.getElementsByTagName("MAKEINSTANCE");
                     for (int s = 0; s < current_node.getLength(); s++) {
                         Element element = (Element) current_node.item(s);
+                        if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                            System.out.println("Normalizing makeinstance eventID=" + element.getAttribute("eventID"));
+                        }
                         String mapped_event = event_map[a].get(element.getAttribute("eventID"));
+                        if(mapped_event==null) {
+                            throw new Exception("Null mapped_event makeinstance eventID=" + element.getAttribute("eventID") + " in makeinstance num " + s + " in annotation=" + annotations.get(a)[i].getParent());
+                        }
                         if (!event_mk_index.containsKey(mapped_event)) {
                             ArrayList<String> mks = new ArrayList<String>();
                             if (mks_new_ids.contains(mapped_event.replaceFirst("e", "ei"))) {

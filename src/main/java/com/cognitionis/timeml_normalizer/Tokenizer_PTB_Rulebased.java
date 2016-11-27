@@ -32,6 +32,8 @@ public class Tokenizer_PTB_Rulebased {
     public static Pattern alwaysTokenPattern = Pattern.compile("(\\[+|\\(+|\\{+|\\<+|\\]+|\\)+|\\}+|\\>+|[;]+|[?!]+|[¿¡]+|=+|\\.\\.+|--+|\"|`+|''+)");
     // Only token if followed by space (?= is needed not to replace it afterwards)
     public static Pattern bySpacePattern = Pattern.compile("([-:,]\\s|\\s-(?![\\d,.]))");
+    // if not followed by number
+    public static Pattern commaSpecial = Pattern.compile("([,][\"',])");
     // single quote regex \s' and '\s (except '\d0(s)? or '' (which are already separated)
     public static Pattern singleQuotePattern = Pattern.compile("('\\d+0s?|(?<=\\s)'(?!')|(?<!')'(?=\\s))");
     // abbreviation regexes. NOTE: language dependent, could be file.list per lang, however to simplify we use a GENERIC one: English and Catalan are included (?![t]\\b) this is to avoid separating n't which is OK since never happens in Catalan
@@ -67,7 +69,7 @@ public class Tokenizer_PTB_Rulebased {
         doSentSplit = sentsplit;
         String periodRegex = "((?<=(\\d|[a-zA-ZÀ-ÿ]['][a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ]?))\\.(?=[\\s])|(?<!(\\b[a-zA-ZÀ-ÿ]|" + defauldAbbrevRegex + "|\\.\\.))\\.(?=[\\s]))";
         periodPattern = Pattern.compile(periodRegex, Pattern.MULTILINE);
-        patterns = new Pattern[]{bySpacePattern, singleQuotePattern, oneWordSuffixPattern, alwaysTokenPattern, oneWordPrefixPattern};
+        patterns = new Pattern[]{bySpacePattern, commaSpecial, singleQuotePattern, oneWordSuffixPattern, alwaysTokenPattern, oneWordPrefixPattern};
     }
 
     public Tokenizer_PTB_Rulebased(Boolean sentsplit, File abbrev) {
@@ -108,7 +110,7 @@ public class Tokenizer_PTB_Rulebased {
 
         String periodRegex = "((?<=(\\d|[a-zA-ZÀ-ÿ]['][a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ]?))\\.(?=[\\s])|(?<!(\\b[a-zA-ZÀ-ÿ]|" + abbrevRegex + "|\\.\\.))\\.(?=[\\s]))";
         periodPattern = Pattern.compile(periodRegex, Pattern.MULTILINE);
-        patterns = new Pattern[]{bySpacePattern, alwaysTokenPattern, singleQuotePattern, oneWordSuffixPattern, oneWordPrefixPattern};
+        patterns = new Pattern[]{bySpacePattern, commaSpecial, alwaysTokenPattern, singleQuotePattern, oneWordSuffixPattern, oneWordPrefixPattern};
     }
 
     /**
@@ -132,6 +134,9 @@ public class Tokenizer_PTB_Rulebased {
                 text = pattern.matcher(text).replaceAll(" $1 $2 $3");
             }
             text = periodPattern.matcher(text).replaceAll(" . ");
+            if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                System.out.println(text);
+            }
             text = basicSpacePattern.matcher(text).replaceAll(" "); // AGAIN to make sure there are no extra spaces
             //Pattern RemoveStartEndSpacePattern = Pattern.compile("^(\\s+)|(\\s+)$", Pattern.MULTILINE);
             //text = RemoveStartEndSpacePattern.matcher(text).replaceAll(""); // clean first and end spaces (trim?)
@@ -139,8 +144,11 @@ public class Tokenizer_PTB_Rulebased {
             if (!text.isEmpty() && !text.equals("")) {
                 //tokens = text.toString().split("\\s+");
                 tokens = text.toString().replaceAll("\\s+", "\n");
+                tokens += "\n";
+                if (System.getProperty("DEBUG") != null && System.getProperty("DEBUG").equalsIgnoreCase("true")) {
+                    System.out.println("TOKENS:\n"+tokens);
+                }
                 if (doSentSplit) {
-                    tokens += "\n";
                     tokens = tokens.replaceAll("\n([.!?])\n", "\n$1\n\n");
                 }
             }
